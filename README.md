@@ -10,7 +10,7 @@ Cơ chế này giúp:
 ---
 
 ## Luồng hoạt động
-![Luồng hoạt động](https://drive.google.com/uc?export=view&id=1UFLuQkX8d9z97SK_lsKsv7Y2H0uQGJo6)
+![Luồng hoạt động](cron_clear_recordings_cdr_flow.png)
 
 ### Mô tả luồng
 1. **Crontab** khởi chạy script shell định kỳ (ví dụ: 03:00 hàng ngày).
