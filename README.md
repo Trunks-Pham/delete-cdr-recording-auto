@@ -60,24 +60,61 @@ Trong hệ thống Autocall/FreeSWITCH:
 | 1   | tenant1@tenant.com     | tenant1\_a7843225-8806-4e3f-b183-9df24fe6b68f | 2024-07-01 00:00:00 | 2024-08-31 23:59:59 | tenant1\_a7843225-8806-4e3f-b183-9df24fe6b68f | [http://10.10.10.5:9200](http://10.10.10.5:9200) | application/json | Basic YWRtaW46cGFzc3dvcmQ= | 10.10.10.2 | 5432    | fusionpbx | fusionpbx | pass123 | both       | Xóa dữ liệu 2 tháng |
 | 2   | tenant2@tenant.com      | tenant2\_b1523421-8806-4e3f-b183-9df24fe6b68f | 2024-06-01 00:00:00 | 2024-06-30 23:59:59 | tenant2\_a7843225-8806-4e3f-b183-9df24fe6b68f | [http://10.10.10.5:9200](http://10.10.10.5:9200) | application/json | Bearer abc123              | 10.10.10.3 | 3306    | autocall  | autocall  | pass456 | recordings | Chỉ xóa file ghi âm |
 
+
 **Giải thích các cột:**
 
-* `Tenant` → Tên tenant trên hệ thống (trùng với thư mục trong `/usr/local/freeswitch/recordings/`).
-* `Domain` → Tên domain của tenant (dùng để xác định CDR và ghi âm tương ứng).
-* `Record_Path` → Đường dẫn thư mục chứa file ghi âm của tenant.
-* `Size_Threshold_MB` → Ngưỡng dung lượng (tính bằng MB) để bắt đầu xóa (nếu tổng dung lượng lớn hơn giá trị này thì script mới chạy).
-* `Days_Keep` → Số ngày cần giữ lại file (VD: `30` nghĩa là chỉ xóa file cũ hơn 30 ngày).
-* `Action`:
+* `STT`
+  Số thứ tự trong danh sách, dùng để theo dõi, không ảnh hưởng đến script.
+
+* `Tenant Name`
+  Tên tenant trên hệ thống, cũng là tên thư mục chứa recordings: `/usr/local/freeswitch/recordings/<Tenant Name>/archive/`.
+
+* `Routing UUID`
+  Giá trị `_routing` dùng để lọc khi xóa CDR trên ElasticSearch.
+
+* `From Datetime`
+  Thời điểm bắt đầu của khoảng thời gian cần xóa dữ liệu, định dạng `YYYY-MM-DD HH:MM:SS`.
+
+* `To Datetime`
+  Thời điểm kết thúc của khoảng thời gian cần xóa dữ liệu, định dạng `YYYY-MM-DD HH:MM:SS`.
+
+* `Index UUID`
+  Tên index ElasticSearch chứa dữ liệu CDR cần xóa.
+
+* `API URL`
+  Địa chỉ API ElasticSearch, ví dụ: `http://10.10.10.5:9200`.
+
+* `CONTEXT_TYPE`
+  Content-Type header khi gọi API ElasticSearch, ví dụ: `application/json`.
+
+* `AUTH`
+  Thông tin Authorization header khi gọi API ElasticSearch, ví dụ: `Basic YWRtaW46cGFzc3dvcmQ=` hoặc `Bearer <token>`. Có thể để trống nếu không cần.
+
+* `DB Host`
+  Địa chỉ IP hoặc hostname của database chứa CDR.
+
+* `DB Port`
+  Cổng kết nối đến database, ví dụ: `5432` cho PostgreSQL, `3306` cho MySQL.
+
+* `DB Name`
+  Tên database chứa bảng CDR (thường bảng `v_xml_cdr`).
+
+* `DB User`
+  Tài khoản database có quyền xóa CDR.
+
+* `DB Pass`
+  Mật khẩu của tài khoản database.
+
+* `Action`
+  Hành động muốn thực hiện với tenant:
 
   * `recordings` → chỉ xóa file ghi âm.
-  * `cdr` → chỉ xóa CDR (ES + DB).
+  * `cdr` → chỉ xóa CDR (ElasticSearch + DB).
   * `both` → xóa cả hai (mặc định nếu để trống).
   * `none` → bỏ qua tenant này.
-* `ES_URL` → Địa chỉ API Elasticsearch để xóa CDR (VD: `http://localhost:9200`).
-* `ES_Index` → Tên index trong Elasticsearch chứa dữ liệu CDR cần xóa.
-* `API_URL` → Địa chỉ API backend để xóa CDR trong database.
-* `CONTEXT_TYPE` → Content-Type khi gọi API (VD: `application/json`).
-* `AUTH` → Thông tin Authorization (VD: `Basic base64`, `Bearer token`).
+
+* `Note`
+  Ghi chú cho quản trị viên, ví dụ: “Xóa dữ liệu 2 tháng”.
 
 ---
 
