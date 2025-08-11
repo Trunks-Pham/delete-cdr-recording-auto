@@ -40,7 +40,7 @@ Tên file ví dụ: **delete_cdr_schedule.xlsx**
 
 ---
 
-## Script mẫu (phiên bản nâng cao, hỗ trợ API `_delete`)
+## Script mẫu
 
 ```bash
 #!/bin/bash
@@ -127,7 +127,7 @@ Ví dụ, chạy script lúc **03:00** hàng ngày:
 * Quyền truy cập đọc/ghi thư mục recordings
 * API ElasticSearch `_delete_by_query` hoạt động
 * File Google Sheet hoặc Excel xuất được CSV
-
+* Người cập nhật file excel phải cẩn thận và không bị buồn ngủ nhập -)))
 ---
 
 ## Tác giả
