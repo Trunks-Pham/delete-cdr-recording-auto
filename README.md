@@ -55,10 +55,10 @@ Trong hệ thống Autocall/FreeSWITCH:
 
 **Ví dụ:**
 
-| STT | Tenant Name | Routing UUID                                  | From Datetime       | To Datetime         | Index UUID       | API URL                                          | CONTEXT\_TYPE    | AUTH                       | DB Host    | DB Port | DB Name   | DB User   | DB Pass | Action     | Note                |
+| STT | Tenant Name | Routing UUID                                  | From Datetime       | To Datetime         | Alias Index      | API URL                                          | CONTEXT\_TYPE    | AUTH                       | DB Host    | DB Port | DB Name   | DB User   | DB Pass | Action     | Note                |
 | --- | ----------- | --------------------------------------------- | ------------------- | ------------------- | ---------------- | ------------------------------------------------ | ---------------- | -------------------------- | ---------- | ------- | --------- | --------- | ------- | ---------- | ------------------- |
-| 1   | tenant1     | tenant1\_a7843225-8806-4e3f-b183-9df24fe6b68f | 2024-07-01 00:00:00 | 2024-08-31 23:59:59 | cdr\_index\_2024 | [http://10.10.10.5:9200](http://10.10.10.5:9200) | application/json | Basic YWRtaW46cGFzc3dvcmQ= | 10.10.10.2 | 5432    | fusionpbx | fusionpbx | pass123 | both       | Xóa dữ liệu 2 tháng |
-| 2   | tenant2     | tenant2\_b1523421-8806-4e3f-b183-9df24fe6b68f | 2024-06-01 00:00:00 | 2024-06-30 23:59:59 | cdr\_index\_2024 | [http://10.10.10.5:9200](http://10.10.10.5:9200) | application/json | Bearer abc123              | 10.10.10.3 | 3306    | autocall  | autocall  | pass456 | recordings | Chỉ xóa file ghi âm |
+| 1   | tenant1     | tenant1\_a7843225-8806-4e3f-b183-9df24fe6b68f | 2024-07-01 00:00:00 | 2024-08-31 23:59:59 | tenant1\_a7843225-8806-4e3f-b183-9df24fe6b68f | [http://10.10.10.5:9200](http://10.10.10.5:9200) | application/json | Basic YWRtaW46cGFzc3dvcmQ= | 10.10.10.2 | 5432    | fusionpbx | fusionpbx | pass123 | both       | Xóa dữ liệu 2 tháng |
+| 2   | tenant2     | tenant2\_b1523421-8806-4e3f-b183-9df24fe6b68f | 2024-06-01 00:00:00 | 2024-06-30 23:59:59 | tenant2\_a7843225-8806-4e3f-b183-9df24fe6b68f | [http://10.10.10.5:9200](http://10.10.10.5:9200) | application/json | Bearer abc123              | 10.10.10.3 | 3306    | autocall  | autocall  | pass456 | recordings | Chỉ xóa file ghi âm |
 
 **Giải thích các cột:**
 
