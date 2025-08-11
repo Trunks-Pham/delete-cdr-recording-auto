@@ -142,6 +142,9 @@ EOF
     echo "" >> "$LOG_FILE"
 done
 
+# Xóa file CSV tạm
+rm -f /tmp/tenant_list.csv
+
 echo "[$(date)] Hoàn tất quá trình" | tee -a "$LOG_FILE"
 ```
 
