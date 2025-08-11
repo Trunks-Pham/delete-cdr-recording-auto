@@ -121,7 +121,167 @@ Trong hệ thống Autocall/FreeSWITCH:
 ## 6. Cài đặt script
 
 **File script**: `auto_clear_records_cdr.sh`
-Quyền: `chmod +x auto_clear_records_cdr.sh`
+Quyền thực thi:
+
+```bash
+chmod +x auto_clear_records_cdr.sh
+```
+
+**Nội dung script mẫu (auto\_clear\_records\_cdr.sh):**
+
+```bash
+#!/bin/bash
+# ========================
+# Script: auto_clear_records_cdr.sh
+# Mô tả: Tự động xóa recordings và/hoặc CDR theo danh sách CSV từ Google Sheets
+# Usage: /bin/bash auto_clear_records_cdr.sh [--dry-run]
+# ========================
+
+set -o pipefail
+
+DRY_RUN=0
+if [[ "$1" == "--dry-run" ]]; then
+  DRY_RUN=1
+  echo "=== DRY RUN mode: không thực thi xóa ==="
+fi
+
+GOOGLE_SHEET_CSV_URL="https://docs.google.com/spreadsheets/d/<ID>/export?format=csv"
+RECORDINGS_BASE="/usr/local/freeswitch/recordings"
+LOG_FILE="/var/log/auto_clear_records.log"
+TMP_CSV="/tmp/tenant_list.csv"
+
+# Tải CSV từ Google Sheets
+curl -sL "$GOOGLE_SHEET_CSV_URL" -o "$TMP_CSV"
+if [[ $? -ne 0 || ! -s "$TMP_CSV" ]]; then
+  echo "[$(date)] ERROR: Không tải được CSV từ Google Sheets" | tee -a "$LOG_FILE"
+  exit 1
+fi
+
+# Bỏ dòng header và đọc từng dòng
+tail -n +2 "$TMP_CSV" | while IFS=',' read -r STT TENANT_NAME ROUTING_UUID FROM_DATETIME TO_DATETIME INDEX_UUID API_URL CONTEXT_TYPE AUTH DB_HOST DB_PORT DB_NAME DB_USER DB_PASS ACTION NOTE
+do
+    # Hàm trim space
+    trim() { echo "$1" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'; }
+    TENANT_NAME=$(trim "$TENANT_NAME")
+    ROUTING_UUID=$(trim "$ROUTING_UUID")
+    FROM_DATETIME=$(trim "$FROM_DATETIME")
+    TO_DATETIME=$(trim "$TO_DATETIME")
+    INDEX_UUID=$(trim "$INDEX_UUID")
+    API_URL=$(trim "$API_URL")
+    CONTEXT_TYPE=$(trim "$CONTEXT_TYPE")
+    AUTH=$(trim "$AUTH")
+    DB_HOST=$(trim "$DB_HOST")
+    DB_PORT=$(trim "$DB_PORT")
+    DB_NAME=$(trim "$DB_NAME")
+    DB_USER=$(trim "$DB_USER")
+    DB_PASS=$(trim "$DB_PASS")
+    ACTION=$(echo "$(trim "$ACTION")" | tr '[:upper:]' '[:lower:]')
+    NOTE=$(trim "$NOTE")
+
+    # Mặc định nếu action trống thì là both
+    if [[ -z "$ACTION" ]]; then
+      ACTION="both"
+    fi
+
+    echo "[$(date)] Xử lý tenant: $TENANT_NAME | Action: $ACTION" | tee -a "$LOG_FILE"
+
+    # Xóa recordings
+    if [[ "$ACTION" == "recordings" || "$ACTION" == "both" ]]; then
+      RECORD_DIR="$RECORDINGS_BASE/$TENANT_NAME/archive"
+      if [ -d "$RECORD_DIR" ]; then
+        echo " - [Recordings] Xóa file ghi âm cũ hơn $FROM_DATETIME tại $RECORD_DIR" | tee -a "$LOG_FILE"
+        if [[ $DRY_RUN -eq 1 ]]; then
+          find "$RECORD_DIR" -type f ! -newermt "$FROM_DATETIME" -print | tee -a "$LOG_FILE"
+        else
+          find "$RECORD_DIR" -type f ! -newermt "$FROM_DATETIME" -print -exec rm -f {} \; >> "$LOG_FILE" 2>&1
+          echo "   -> Đã xóa xong." | tee -a "$LOG_FILE"
+        fi
+      else
+        echo " - [Recordings] Thư mục không tồn tại: $RECORD_DIR" | tee -a "$LOG_FILE"
+      fi
+    else
+      echo " - [Recordings] Bỏ qua (action=$ACTION)" | tee -a "$LOG_FILE"
+    fi
+
+    # Xóa CDR ElasticSearch
+    if [[ "$ACTION" == "cdr" || "$ACTION" == "both" ]]; then
+      if [[ -z "$API_URL" || -z "$INDEX_UUID" ]]; then
+        echo " - [ES] Bỏ qua: thiếu API_URL hoặc Index UUID" | tee -a "$LOG_FILE"
+      else
+        DELETE_URL="$API_URL/$INDEX_UUID/_delete_by_query"
+        if [[ -z "$CONTEXT_TYPE" ]]; then CONTEXT_TYPE="application/json"; fi
+        # Tạo JSON body
+        JSON_BODY=$(cat <<EOF
+{
+  "track_total_hits": true,
+  "query": {
+    "bool": {
+      "filter": [
+        {
+          "range": {
+            "start_stamp": {
+              "from": "$FROM_DATETIME",
+              "to": "$TO_DATETIME",
+              "include_lower": true,
+              "include_upper": true
+            }
+          }
+        }$( if [[ -n "$ROUTING_UUID" ]]; then echo ', { "terms": { "_routing": ["'"$ROUTING_UUID"'"] } }'; fi )
+      ]
+    }
+  }
+}
+EOF
+)
+        echo " - [ES] Gửi API xóa dữ liệu CDR tới $DELETE_URL" | tee -a "$LOG_FILE"
+        if [[ $DRY_RUN -eq 1 ]]; then
+          echo "   DRY RUN: body:" | tee -a "$LOG_FILE"
+          echo "$JSON_BODY" | tee -a "$LOG_FILE"
+        else
+          if [[ -n "$AUTH" ]]; then
+            curl -s -X POST "$DELETE_URL" -H "Content-Type: $CONTEXT_TYPE" -H "Authorization: $AUTH" -d "$JSON_BODY" >> "$LOG_FILE" 2>&1 || echo "   [ES] Lỗi khi gọi API" | tee -a "$LOG_FILE"
+          else
+            curl -s -X POST "$DELETE_URL" -H "Content-Type: $CONTEXT_TYPE" -d "$JSON_BODY" >> "$LOG_FILE" 2>&1 || echo "   [ES] Lỗi khi gọi API" | tee -a "$LOG_FILE"
+          fi
+          echo "   -> Yêu cầu xóa CDR đã gửi." | tee -a "$LOG_FILE"
+        fi
+      fi
+    else
+      echo " - [ES] Bỏ qua (action=$ACTION)" | tee -a "$LOG_FILE"
+    fi
+
+    # Xóa CDR Database
+    if [[ "$ACTION" == "cdr" || "$ACTION" == "both" ]]; then
+      if [[ -z "$DB_HOST" || -z "$DB_NAME" || -z "$DB_USER" ]]; then
+        echo " - [DB] Bỏ qua: thiếu thông tin DB" | tee -a "$LOG_FILE"
+      else
+        echo " - [DB] Xóa dữ liệu CDR trong DB $DB_NAME tại $DB_HOST:$DB_PORT" | tee -a "$LOG_FILE"
+        SQL="DELETE FROM v_xml_cdr WHERE start_stamp BETWEEN '$FROM_DATETIME' AND '$TO_DATETIME' AND context = '$TENANT_NAME';"
+        if [[ $DRY_RUN -eq 1 ]]; then
+          echo "   DRY RUN: SQL -> $SQL" | tee -a "$LOG_FILE"
+        else
+          if [[ "$DB_PORT" == "5432" ]]; then
+            PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "$SQL" >> "$LOG_FILE" 2>&1 || echo "   [DB] Lỗi khi xóa trên PostgreSQL" | tee -a "$LOG_FILE"
+          else
+            mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "$SQL" >> "$LOG_FILE" 2>&1 || echo "   [DB] Lỗi khi xóa trên MySQL" | tee -a "$LOG_FILE"
+          fi
+          echo "   -> Lệnh xóa DB đã chạy." | tee -a "$LOG_FILE"
+        fi
+      fi
+    else
+      echo " - [DB] Bỏ qua (action=$ACTION)" | tee -a "$LOG_FILE"
+    fi
+
+    echo "" >> "$LOG_FILE"
+
+done
+
+rm -f "$TMP_CSV"
+
+echo "[$(date)] Hoàn tất quá trình" | tee -a "$LOG_FILE"
+```
+
+---
 
 **Chạy thử (không xóa thật):**
 
