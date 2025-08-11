@@ -68,12 +68,15 @@ Tên file ví dụ: **delete\_cdr\_schedule.xlsx**
 #!/bin/bash
 # ========================
 # Script: auto_clear_records_cdr.sh
-# Mục tiêu: Xóa ghi âm + CDR (ES + DB) dựa trên danh sách Google Sheet/Excel
 # ========================
 
 GOOGLE_SHEET_CSV_URL="https://docs.google.com/spreadsheets/d/<ID>/export?format=csv"
 RECORDINGS_BASE="/usr/local/freeswitch/recordings"
 LOG_FILE="/var/log/auto_clear_records.log"
+
+# ==== Cấu hình cố định cho API ES ====
+CONTEXT_TYPE="application/json"
+AUTH="Basic YWRtaW46cGFzc3dvcmQ="  # hoặc Bearer token
 
 # Tải danh sách CSV từ Google Sheets
 curl -sL "$GOOGLE_SHEET_CSV_URL" -o /tmp/tenant_list.csv
@@ -83,7 +86,7 @@ tail -n +2 /tmp/tenant_list.csv | while IFS=',' read -r TENANT_NAME ROUTING_UUID
 do
     echo "[$(date)] Xử lý tenant: $TENANT_NAME ($ROUTING_UUID)" | tee -a "$LOG_FILE"
 
-    # Xóa ghi âm cũ
+    # Xóa ghi âm
     if [ -d "$RECORDINGS_BASE/$TENANT_NAME/archive" ]; then
         echo " - Xóa ghi âm cũ hơn $FROM_DATETIME" | tee -a "$LOG_FILE"
         find "$RECORDINGS_BASE/$TENANT_NAME/archive" -type f ! -newermt "$FROM_DATETIME" -exec rm -f {} \;
@@ -91,7 +94,7 @@ do
         echo " - Không tìm thấy thư mục recordings cho $TENANT_NAME" | tee -a "$LOG_FILE"
     fi
 
-    # Xóa CDR trong ElasticSearch
+    # Xóa CDR trên ES
     DELETE_URL="$API_URL/$INDEX_UUID/_delete_by_query"
     JSON_BODY=$(cat <<EOF
 {
@@ -120,17 +123,18 @@ do
 }
 EOF
 )
-    echo " - Gọi API xóa CDR ES: $DELETE_URL" | tee -a "$LOG_FILE"
-    curl -s -X POST "$DELETE_URL" -H "Content-Type: application/json" -d "$JSON_BODY" >> "$LOG_FILE"
+    echo " - Gọi API xóa CDR ES" | tee -a "$LOG_FILE"
+    curl -s -X POST "$DELETE_URL" \
+         -H "Content-Type: $CONTEXT_TYPE" \
+         -H "Authorization: $AUTH" \
+         -d "$JSON_BODY" >> "$LOG_FILE"
 
-    # Xóa CDR trong Database
+    # Xóa CDR trong DB
     echo " - Xóa CDR trong DB: $DB_NAME@$DB_HOST" | tee -a "$LOG_FILE"
     if [[ "$DB_PORT" == "5432" ]]; then
-        # PostgreSQL
         PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c \
         "DELETE FROM v_xml_cdr WHERE start_stamp BETWEEN '$FROM_DATETIME' AND '$TO_DATETIME' AND context = '$TENANT_NAME';" >> "$LOG_FILE"
     else
-        # MySQL
         mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e \
         "DELETE FROM v_xml_cdr WHERE start_stamp BETWEEN '$FROM_DATETIME' AND '$TO_DATETIME' AND context = '$TENANT_NAME';" >> "$LOG_FILE"
     fi
