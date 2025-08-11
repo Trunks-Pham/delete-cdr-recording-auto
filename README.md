@@ -60,15 +60,23 @@ Trong hệ thống Autocall/FreeSWITCH:
 | 1   | tenant1     | tenant1\_a7843225-8806-4e3f-b183-9df24fe6b68f | 2024-07-01 00:00:00 | 2024-08-31 23:59:59 | cdr\_index\_2024 | [http://10.10.10.5:9200](http://10.10.10.5:9200) | application/json | Basic YWRtaW46cGFzc3dvcmQ= | 10.10.10.2 | 5432    | fusionpbx | fusionpbx | pass123 | both       | Xóa dữ liệu 2 tháng |
 | 2   | tenant2     | tenant2\_b1523421-8806-4e3f-b183-9df24fe6b68f | 2024-06-01 00:00:00 | 2024-06-30 23:59:59 | cdr\_index\_2024 | [http://10.10.10.5:9200](http://10.10.10.5:9200) | application/json | Bearer abc123              | 10.10.10.3 | 3306    | autocall  | autocall  | pass456 | recordings | Chỉ xóa file ghi âm |
 
-**Giải thích cột mới:**
+**Giải thích các cột:**
 
+* `Tenant` → Tên tenant trên hệ thống (trùng với thư mục trong `/usr/local/freeswitch/recordings/`).
+* `Domain` → Tên domain của tenant (dùng để xác định CDR và ghi âm tương ứng).
+* `Record_Path` → Đường dẫn thư mục chứa file ghi âm của tenant.
+* `Size_Threshold_MB` → Ngưỡng dung lượng (tính bằng MB) để bắt đầu xóa (nếu tổng dung lượng lớn hơn giá trị này thì script mới chạy).
+* `Days_Keep` → Số ngày cần giữ lại file (VD: `30` nghĩa là chỉ xóa file cũ hơn 30 ngày).
 * `Action`:
 
   * `recordings` → chỉ xóa file ghi âm.
   * `cdr` → chỉ xóa CDR (ES + DB).
   * `both` → xóa cả hai (mặc định nếu để trống).
   * `none` → bỏ qua tenant này.
-* `CONTEXT_TYPE` → Content-Type khi gọi API ES (VD: `application/json`).
+* `ES_URL` → Địa chỉ API Elasticsearch để xóa CDR (VD: `http://localhost:9200`).
+* `ES_Index` → Tên index trong Elasticsearch chứa dữ liệu CDR cần xóa.
+* `API_URL` → Địa chỉ API backend để xóa CDR trong database.
+* `CONTEXT_TYPE` → Content-Type khi gọi API (VD: `application/json`).
 * `AUTH` → Thông tin Authorization (VD: `Basic base64`, `Bearer token`).
 
 ---
