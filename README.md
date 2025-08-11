@@ -28,7 +28,7 @@ Tên file ví dụ: **delete_cdr_schedule.xlsx**
 
 | STT | Tenant Name | Routing UUID | From Datetime         | To Datetime           | Index UUID       | API URL                   | Note |
 |-----|-------------|--------------|-----------------------|-----------------------|------------------|---------------------------|------|
-| 1   | pitel04     | pitel04_a7843225-8806-4e3f-b183-9df24fe6b68f | 2024-07-01 00:00:00 | 2024-08-31 23:00:00 | cdr_index_2024  | http://10.10.10.5:9200    | Xóa dữ liệu 2 tháng |
+| 1   | tenant1     | tenant1_a7843225-8806-4e3f-b183-9df24fe6b68f | 2024-07-01 00:00:00 | 2024-08-31 23:00:00 | cdr_index_2024  | http://10.10.10.5:9200    | Xóa dữ liệu 2 tháng |
 | 2   | tenant2     | tenant2_b1523421-8806-4e3f-b183-9df24fe6b68f | 2024-06-01 00:00:00 | 2024-06-30 23:00:00 | cdr_index_2024  | http://10.10.10.5:9200    | Xóa tháng 6 |
 
 ### Giải thích:
