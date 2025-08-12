@@ -2,32 +2,17 @@
 
 ## **Tổng quan giải pháp song song**
 
-### **Giải pháp 1: Crontab (Automation hoàn toàn)**
+| **Giải pháp 1: Crontab (Automation hoàn toàn)**                  | **Giải pháp 2: Jenkins UI (On-demand + Scheduled)**                                                                                                                      |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Mục tiêu:** Chạy tự động hàng ngày hoặc theo chu kỳ định sẵn.  | **Mục tiêu:** Cho phép vận hành job từ giao diện Jenkins với khả năng chạy thủ công hoặc lập lịch ngay trên UI.                                                          |
+| **Luồng:**                                                       | **Luồng:**                                                                                                                                                               |
+| 1. Crontab kích hoạt script `auto_clear.sh`.                     | 1. Người vận hành vào **Jenkins UI** → chọn pipeline `Clear_Recordings_CDR`.                                                                                             |
+| 2. Script đọc file CSV từ **Google Sheets** (hoặc nguồn nội bộ). | 2. Nhập thông tin: <br> - Loại dữ liệu: `recordings` / `cdr` / `both` <br> - Tenant name hoặc upload file CSV <br> - Ngày bắt đầu/kết thúc <br> - `Dry-run` hay xóa thật |
+| 3. Thực hiện xóa dữ liệu **Recording/CDR**.                      | 3. Jenkins pipeline gọi `auto_clear.sh` với tham số tương ứng.                                                                                                           |
+| 4. Lưu log tại `/var/log/auto_clear/`.                           | 4. Log chạy được lưu trong **Jenkins Console** và **archive** để tra cứu sau.                                                                                            |
 
-* **Mục tiêu:** Chạy tự động hàng ngày hoặc theo chu kỳ định sẵn.
-* **Luồng:**
-
-  1. Crontab kích hoạt script `auto_clear.sh`.
-  2. Script đọc file CSV từ Google Sheets (hoặc nguồn nội bộ).
-  3. Thực hiện xóa dữ liệu Recording/CDR.
-  4. Lưu log tại `/var/log/auto_clear/`.
-
----
-
-### **Giải pháp 2: Jenkins UI (On-demand + Scheduled)**
-
-* **Mục tiêu:** Cho phép vận hành job từ giao diện Jenkins với khả năng chạy thủ công hoặc lập lịch ngay trên UI.
-* **Luồng:**
-
-  1. Người vận hành vào Jenkins UI → chọn pipeline `Clear_Recordings_CDR`.
-  2. Nhập thông tin:
-
-     * Loại dữ liệu: recordings / cdr / both
-     * Tenant name hoặc upload file CSV
-     * Ngày bắt đầu/kết thúc
-     * Dry-run hay xóa thật
-  3. Jenkins pipeline gọi `auto_clear.sh` với tham số tương ứng.
-  4. Log chạy được lưu trong Jenkins Console và archive.
+* **Đường 1:** Automation 100% bằng Crontab
+* **Đường 2:** On-demand & Scheduled từ Jenkins UI
 
 ---
 
