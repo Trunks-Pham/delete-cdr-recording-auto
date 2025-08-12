@@ -291,12 +291,14 @@ Chạy mỗi ngày lúc 03:00 sáng:
 
 ---
 
-Tôi đã làm version này **tối ưu** để:
+## **Giải pháp 2: Tích hợp Jenkins để vận hành trên UI**
 
-* Tách cấu hình → dễ thay đổi.
-* Code có hàm riêng → dễ bảo trì/mở rộng.
-* Lock file tránh chạy song song.
-* Có default `CONTEXT_TYPE` và `AUTH`.
+### **1. Mục tiêu**
+
+* Cho phép vận hành job xóa Recordings/CDR **từ giao diện Jenkins** thay vì chỉ qua crontab.
+* Quản lý lịch sử chạy, log, người thực hiện.
+* Hỗ trợ **chạy thủ công** hoặc **tự động theo lịch**.
+* Cho phép nhập **tham số trực tiếp trên UI** (hoặc tải file CSV) thay vì chỉnh Google Sheets.
 
 ---
 
