@@ -1,4 +1,77 @@
-# Tài liệu kỹ thuật: Hệ thống tự động xóa Recordings & CDR
+# Tài liệu kỹ thuật: Hệ thống tự động xóa Recordings & CDR [Google Sheet & Jenkins pipeline]
+
+## **Tổng quan giải pháp song song**
+
+### **Giải pháp 1: Crontab (Automation hoàn toàn)**
+
+* **Mục tiêu:** Chạy tự động hàng ngày hoặc theo chu kỳ định sẵn.
+* **Luồng:**
+
+  1. Crontab kích hoạt script `auto_clear.sh`.
+  2. Script đọc file CSV từ Google Sheets (hoặc nguồn nội bộ).
+  3. Thực hiện xóa dữ liệu Recording/CDR.
+  4. Lưu log tại `/var/log/auto_clear/`.
+
+---
+
+### **Giải pháp 2: Jenkins UI (On-demand + Scheduled)**
+
+* **Mục tiêu:** Cho phép vận hành job từ giao diện Jenkins với khả năng chạy thủ công hoặc lập lịch ngay trên UI.
+* **Luồng:**
+
+  1. Người vận hành vào Jenkins UI → chọn pipeline `Clear_Recordings_CDR`.
+  2. Nhập thông tin:
+
+     * Loại dữ liệu: recordings / cdr / both
+     * Tenant name hoặc upload file CSV
+     * Ngày bắt đầu/kết thúc
+     * Dry-run hay xóa thật
+  3. Jenkins pipeline gọi `auto_clear.sh` với tham số tương ứng.
+  4. Log chạy được lưu trong Jenkins Console và archive.
+
+---
+
+### **Sơ đồ kiến trúc**
+
+```
+                   ┌──────────────────┐
+                   │ Google Sheets /   │
+                   │ CSV Input Source  │
+                   └─────────┬────────┘
+                             │
+               ┌─────────────┴─────────────┐
+               │                           │
+       ┌───────▼───────┐           ┌───────▼───────┐
+       │   CRONTAB     │           │  Jenkins UI   │
+       │ (Daily Auto)  │           │ (On-demand /  │
+       │               │           │   Scheduled)  │
+       └───────┬───────┘           └───────┬───────┘
+               │                           │
+       ┌───────▼─────────┐          ┌──────▼─────────┐
+       │ auto_clear.sh   │          │ Jenkinsfile    │
+       │ (Shell Script)  │          │ (Pipeline)     │
+       └───────┬─────────┘          └──────┬─────────┘
+               │                           │
+         ┌─────▼─────┐               ┌─────▼─────┐
+         │ Xóa dữ liệu│               │ Xóa dữ liệu│
+         │ Recordings │               │ Recordings │
+         │ & CDR      │               │ & CDR      │
+         └─────┬─────┘               └─────┬─────┘
+               │                           │
+       ┌───────▼──────────┐         ┌──────▼──────────┐
+       │ Log file:         │         │ Jenkins Console │
+       │ /var/log/auto...  │         │ (Build History) │
+       └──────────────────┘         └─────────────────┘
+```
+---
+
+ **Điểm mạnh khi kết hợp 2 giải pháp**
+
+* **Crontab** → đảm bảo dữ liệu luôn được dọn tự động định kỳ.
+* **Jenkins UI** → cho phép chạy bất kỳ lúc nào, tùy biến tham số, và quản lý lịch sử chạy, ai chạy, kết quả thế nào.
+* **Script** → dùng chung cho cả hai, giảm bảo trì và tránh trùng logic.
+
+---
 
 ## Giải Pháp 1: Sử dụng theo danh sách Google Sheets
 ## 1. Giới thiệu
