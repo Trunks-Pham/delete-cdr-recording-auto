@@ -1,5 +1,6 @@
-# Tài liệu kỹ thuật: Hệ thống tự động xóa Recordings & CDR theo danh sách Google Sheets
+# Tài liệu kỹ thuật: Hệ thống tự động xóa Recordings & CDR
 
+## Giải Pháp 1: Sử dụng theo danh sách Google Sheets
 ## 1. Giới thiệu
 
 Hệ thống này được thiết kế để **tự động xóa dữ liệu ghi âm (Recordings)** và/hoặc **Call Detail Records (CDR)** của các tenant trên nền tảng Autocall / FreeSWITCH, dựa trên danh sách cấu hình được lưu trữ tại **Google Sheets** hoặc file CSV.
@@ -296,5 +297,142 @@ Tôi đã làm version này **tối ưu** để:
 * Code có hàm riêng → dễ bảo trì/mở rộng.
 * Lock file tránh chạy song song.
 * Có default `CONTEXT_TYPE` và `AUTH`.
+
+---
+
+### **2. Kiến trúc đề xuất**
+
+```
+┌─────────────┐       ┌──────────────────────┐
+│   Jenkins    │       │ Google Sheets / CSV  │
+│   UI + API   │<─────>│ (Tùy chọn tải sẵn)   │
+└─────┬───────┘       └──────────────────────┘
+      │
+      │ Trigger (Manual / Schedule)
+      │
+┌─────▼──────────────────────────────┐
+│ Jenkins Pipeline (Groovy Script)   │
+│  ├── Nhập params:                  │
+│  │    - Tenant / Date range        │
+│  │    - Action type (recordings/cdr)│
+│  │    - CSV upload (optional)      │
+│  ├── Gọi shell script               │
+│  ├── Lưu log Jenkins Console        │
+└─────┬──────────────────────────────┘
+      │
+      ▼
+┌──────────────┐
+│ auto_clear.sh│
+│ (phiên bản   │
+│ hiện tại)    │
+└──────────────┘
+```
+
+---
+
+### **3. Cách triển khai**
+
+#### **3.1. Tạo Jenkins Job (Pipeline)**
+
+* **Loại**: Pipeline (hoặc Freestyle job nếu đơn giản)
+* **Tích hợp tham số**:
+
+  * `ACTION_TYPE` → recordings / cdr / both
+  * `TENANT_NAME` → nhập tay hoặc all
+  * `FROM_DATETIME` và `TO_DATETIME`
+  * **Upload file CSV** (Jenkins có plugin *File Parameter*)
+  * **Dry-run** checkbox
+
+Ví dụ code Jenkinsfile:
+
+```groovy
+pipeline {
+    agent any
+    parameters {
+        choice(name: 'ACTION_TYPE', choices: ['recordings', 'cdr', 'both'], description: 'Loại dữ liệu cần xóa')
+        string(name: 'TENANT_NAME', defaultValue: '', description: 'Tên tenant (để trống để lấy từ CSV)')
+        string(name: 'FROM_DATETIME', defaultValue: '2024-07-01 00:00:00', description: 'Thời gian bắt đầu')
+        string(name: 'TO_DATETIME', defaultValue: '2024-08-01 23:59:59', description: 'Thời gian kết thúc')
+        booleanParam(name: 'DRY_RUN', defaultValue: true, description: 'Chạy ở chế độ dry-run')
+        file(name: 'TENANT_FILE', description: 'CSV chứa danh sách tenant (tùy chọn)')
+    }
+    stages {
+        stage('Prepare') {
+            steps {
+                sh '''
+                echo "Chuẩn bị môi trường..."
+                mkdir -p /tmp/jenkins_clear
+                if [ -f "$TENANT_FILE" ]; then
+                    cp "$TENANT_FILE" /tmp/tenant_list.csv
+                fi
+                '''
+            }
+        }
+        stage('Execute Script') {
+            steps {
+                sh '''
+                /usr/local/bin/auto_clear_records_cdr.sh \
+                    $( [ "$DRY_RUN" = "true" ] && echo "--dry-run" ) \
+                    --action "$ACTION_TYPE" \
+                    --tenant "$TENANT_NAME" \
+                    --from "$FROM_DATETIME" \
+                    --to "$TO_DATETIME"
+                '''
+            }
+        }
+    }
+}
+```
+
+---
+
+#### **3.2. Điều chỉnh Script**
+
+* Thêm **tùy chọn CLI** để nhận input từ Jenkins thay vì chỉ đọc CSV từ Google Sheets.
+* Ưu tiên:
+
+  * Nếu Jenkins truyền file CSV → dùng file đó.
+  * Nếu Jenkins truyền tham số tenant/date → chạy trực tiếp.
+  * Nếu không truyền gì → fallback về Google Sheets CSV.
+
+Ví dụ:
+
+```bash
+--action both
+--tenant tenant1
+--from "2024-07-01 00:00:00"
+--to "2024-08-01 23:59:59"
+--dry-run
+--csv /tmp/tenant_list.csv
+```
+
+---
+
+#### **3.3. Lợi ích khi thêm Jenkins**
+
+* **Audit log**: Biết ai chạy, khi nào, kết quả ra sao.
+* **UI thân thiện**: Không cần SSH vào server.
+* **Linh hoạt**: Có thể chạy ad-hoc cho 1 tenant hoặc nhóm tenant.
+* **Bảo mật**: Jenkins có thể quản lý credential API/DB thay vì lưu ở file config thô.
+
+---
+
+#### **3.4. Bảo mật**
+
+* Dùng Jenkins **Credentials Plugin** để lưu:
+
+  * DB password
+  * API token ElasticSearch
+* Jenkins pipeline chỉ inject vào môi trường runtime → không xuất hiện trong log.
+
+---
+
+### **4. Lịch chạy**
+
+* Jenkins vẫn có thể chạy **theo lịch cron** (VD: 03:00 mỗi ngày) nhưng quản lý ngay trên UI.
+* Có thể kết hợp:
+
+  * Jenkins job **tự động** mỗi ngày.
+  * Jenkins job **thủ công** khi cần xóa đặc biệt.
 
 ---
