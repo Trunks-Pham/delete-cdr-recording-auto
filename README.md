@@ -1,4 +1,4 @@
-#Tài liệu kỹ thuật: Hệ thống tự động xóa Recordings & CDR theo danh sách Google Sheets
+# Tài liệu kỹ thuật: Hệ thống tự động xóa Recordings & CDR theo danh sách Google Sheets
 
 ## 1. Giới thiệu
 
