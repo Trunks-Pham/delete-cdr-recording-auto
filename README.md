@@ -52,7 +52,7 @@ Hệ thống này được thiết kế để **tự động xóa dữ liệu gh
 
 ### 4.1. Google Sheet / CSV
 
-| STT | Tenant Name                                     | Routing UUID | From Datetime       | To Datetime         | Index UUID | API URL                                          | CONTEXT\_TYPE | AUTH      | DB Host    | DB Port | DB Name   | DB User   | DB Pass | Action | Note                |
+| STT | Tenant Name                                     | Routing UUID | From Datetime       | To Datetime         | Alias of Index | API URL                                          | CONTEXT\_TYPE | AUTH      | DB Host    | DB Port | DB Name   | DB User   | DB Pass | Action | Note                |
 | --- | ----------------------------------------------- | ------------ | ------------------- | ------------------- | ---------- | ------------------------------------------------ | ------------- | --------- | ---------- | ------- | --------- | --------- | ------- | ------ | ------------------- |
 | 1   | [tenant1@tenant.com](mailto:tenant1@tenant.com) | tenant1\_a7843225-8806-4e3f-b183-9df24fe6b68f        | 2024-07-01 00:00:00 | 2024-08-31 23:59:59 | index1     | [http://10.10.10.5:9200](http://10.10.10.5:9200) | *(trống)*     | *(trống)* | 10.10.10.2 | 5432    | fusionpbx | fusionpbx | pass123 | both   | Xóa dữ liệu 2 tháng |
 
